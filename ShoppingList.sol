@@ -1,80 +1,49 @@
 pragma solidity >=0.4.22 <=0.8.17;
 
 contract ShoppingList {
-    // Write your structs here
-    struct Item {
-        string name;
-        uint qty;
-    }
+    mapping (address=>User) users;
 
-    struct List {
-        string name;
-        Item[] items;
-    }
+   struct User {
+    mapping (string=>List) lists;
+    string[] listNames;
+   }
 
-    mapping (address => List[]) lists;
+   struct Item {
+    string name;
+    uint quantity;
+   }
+
+   struct List {
+    string name;
+    Item[] items;
+   }
+
+    function listExists(string memory name) internal view returns (bool){
+        return bytes(users[msg.sender].lists[name].name).length !=0;
+    }
 
     function createList(string memory name) public {
         require(bytes(name).length>0, "No name provided");
-        bool exists;
-        uint listSize = lists[msg.sender].length;
-        for (uint i; i<listSize;i++){
-            if ( keccak256(abi.encodePacked((lists[msg.sender][i].name))) == keccak256(abi.encodePacked((name)))){
-                exists = true;
-            }
-        }
-        require(!exists, "List already exists");
-        List memory l;
-        Item[] memory i;
-        l.name = name;
-        l.items = i;
-        lists[msg.sender].push(l);
+        require(!listExists(name), "already exist");
+        users[msg.sender].listNames.push(name);
+        users[msg.sender].lists[name].name = name;
     }
 
     function getListNames() public view returns (string[] memory) {
-        // Write your code here
-        uint n = lists[msg.sender].length;
-        string[] memory res = new string[](n);
-        for (uint i; i<n; i++){
-            res[i] = lists[msg.sender][i].name;
-        }
-        return res;
+        return users[msg.sender].listNames;
     }
 
     function getItemNames(string memory listName) public view returns (string[] memory){
-        require(bytes(listName).length>0, "No name provided");
-        bool exists;
-        uint listSize = lists[msg.sender].length;
-        uint listIdx;
-        for (uint i; i<listSize;i++){
-            if ( keccak256(abi.encodePacked((lists[msg.sender][i].name))) == keccak256(abi.encodePacked((listName)))){
-                exists = true;
-                listIdx = i;
-            }
+        require(listExists(listName));
+        string[] memory names = new string[](users[msg.sender].lists[listName].items.length);
+        for (uint256 idx = 0; idx < names.length; idx++) {
+            names[idx] = users[msg.sender].lists[listName].items[idx].name;
         }
-        require(exists, "List does not exists");
-        uint numItems = lists[msg.sender][listIdx].items.length;
-        string[] memory items = new string[](numItems);
-        for(uint i; i<numItems; i++){
-            items[i] = lists[msg.sender][listIdx].items[i].name;
-        }
-        return items;
+        return names;
     }
 
     function addItem( string memory listName, string memory itemName, uint256 quantity) public {
-        require(bytes(listName).length>0, "No name provided");
-        require(bytes(itemName).length>0, "No item name provided");
-        bool exists;
-        uint listSize = lists[msg.sender].length;
-        uint listIdx;
-        for (uint i; i<listSize;i++){
-            if ( keccak256(abi.encodePacked((lists[msg.sender][i].name))) == keccak256(abi.encodePacked((listName)))){
-                exists = true;
-                listIdx = i;
-            }
-        }
-        require(exists, "List does not exists");
-        //Item memory item = Item(itemName, quantity);
-        lists[msg.sender][listIdx].items.push(Item(itemName, quantity));
+        require(listExists(listName));
+        users[msg.sender].lists[listName].items.push(Item(itemName, quantity));
     }
 }
